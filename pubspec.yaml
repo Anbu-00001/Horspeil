@@ -38,7 +38,7 @@ dependencies:
   # --- On-device German language gate (the differentiator) ---
   sherpa_onnx: ^1.13.3        # spoken-language-ID (Whisper multilingual), on-device
   # --- Audio capture + playback ---
-  record: ^6.2.1              # in-app recording; can emit 16kHz mono PCM directly (7.x needs Dart 3.12; we're on 3.11)
+  record: ^7.1.1              # in-app recording; can emit 16kHz mono PCM directly (needs Dart 3.12, provided by the Flutter upgrade)
   just_audio: ^0.10.6         # playback / preview
   # --- Infra / utilities ---
   path_provider: ^2.1.6       # app-support dir for cached ML model + drafts
