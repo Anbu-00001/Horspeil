@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Mic for in-app recording; internet to fetch the on-device language-ID model on first run. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="horspiel"
+        android:label="Hörspiel"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
