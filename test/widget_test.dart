@@ -1,30 +1,24 @@
-// This is a basic Flutter widget test.
+// Smoke test: the app boots and, with no signed-in user, lands on onboarding.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Kept deliberately shallow — it exercises app construction + the AuthGate
+// branch, without driving plugin-backed flows (recording, playback, model
+// download) that require a real device.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:horspiel/app_services.dart';
 import 'package:horspiel/main.dart';
+import 'package:horspiel/ui/onboarding/onboarding_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('boots to onboarding when signed out', (WidgetTester tester) async {
+    final services = AppServices.local();
+    addTearDown(services.dispose);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(HorspielApp(services: services));
+    // One frame for the AuthGate StreamBuilder to resolve to the null-user state.
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 }

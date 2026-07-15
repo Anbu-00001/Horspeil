@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
+
 /// Minimal user identity used to attribute podcasts.
 class AppUser {
   const AppUser({required this.id, required this.displayName, this.email});
@@ -75,4 +77,70 @@ class LocalAuthRepository implements AuthRepository {
     _controller.add(user);
     return user;
   }
+}
+
+/// Supabase-backed auth. Maps Supabase's [sb.User] onto [AppUser] so the rest
+/// of the app never imports the Supabase SDK. Display name is stored in user
+/// metadata (`display_name`) at sign-up and read back on every session.
+class SupabaseAuthRepository implements AuthRepository {
+  SupabaseAuthRepository(this._auth);
+
+  final sb.GoTrueClient _auth;
+
+  static const String _displayNameKey = 'display_name';
+
+  AppUser? _toAppUser(sb.User? user) {
+    if (user == null) return null;
+    final metaName = user.userMetadata?[_displayNameKey] as String?;
+    final fallback = user.email?.split('@').first ?? 'Gast';
+    return AppUser(
+      id: user.id,
+      displayName: (metaName != null && metaName.isNotEmpty) ? metaName : fallback,
+      email: user.email,
+    );
+  }
+
+  @override
+  AppUser? get currentUser => _toAppUser(_auth.currentUser);
+
+  @override
+  Stream<AppUser?> authState() async* {
+    yield _toAppUser(_auth.currentUser);
+    yield* _auth.onAuthStateChange.map((state) => _toAppUser(state.session?.user));
+  }
+
+  @override
+  Future<AppUser> signIn({required String email, required String password}) async {
+    final res = await _auth.signInWithPassword(email: email, password: password);
+    final user = _toAppUser(res.user);
+    if (user == null) throw StateError('Sign-in returned no user');
+    return user;
+  }
+
+  @override
+  Future<AppUser> signUp({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    final res = await _auth.signUp(
+      email: email,
+      password: password,
+      data: {_displayNameKey: displayName},
+    );
+    final user = _toAppUser(res.user);
+    if (user == null) throw StateError('Sign-up returned no user');
+    return user;
+  }
+
+  @override
+  Future<AppUser> continueAsGuest() async {
+    final res = await _auth.signInAnonymously();
+    final user = _toAppUser(res.user);
+    if (user == null) throw StateError('Anonymous sign-in returned no user');
+    return user;
+  }
+
+  @override
+  Future<void> signOut() => _auth.signOut();
 }

@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_services.dart';
+import 'config/env.dart';
 import 'repositories/auth_repository.dart';
 import 'ui/home/home_shell.dart';
 import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(HorspielApp(services: AppServices.local()));
+
+  // Initialize Supabase only when credentials were injected at build time
+  // (--dart-define-from-file=.env). Without them the app runs fully local.
+  if (Env.hasSupabase) {
+    await Supabase.initialize(
+      url: Env.supabaseUrl,
+      publishableKey: Env.supabasePublishableKey,
+    );
+  }
+
+  runApp(HorspielApp(services: AppServices.auto()));
 }
 
 class HorspielApp extends StatelessWidget {

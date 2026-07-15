@@ -47,13 +47,17 @@ dependencies:
   crypto: ^3.0.7              # verify model checksum
   provider: ^6.1.5+1          # simple state management
 
-  # NOTE: Firebase (auth/firestore/storage) is intentionally NOT added yet.
-  # The backend sits behind PodcastRepository / AuthRepository interfaces with a
-  # local implementation, so Phase 1 runs without a Firebase project. Adding
-  # firebase_* + running `flutterfire configure` is the credential-gated step.
+  # --- Backend: Supabase (Auth + Storage now, Postgres metadata later) ---
+  # Chosen over Firebase (Cloud Storage there is Blaze-only since 2026-02-03).
+  # Credentials are injected at build time via --dart-define-from-file=.env, so
+  # no key is hardcoded or committed. Repos stay behind AuthRepository /
+  # AudioStorage interfaces, so this is swappable without touching call sites.
+  supabase_flutter: ^2.15.0
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
