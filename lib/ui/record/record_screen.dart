@@ -41,6 +41,7 @@ class _RecordScreenState extends State<RecordScreen> {
   double _level = 0;
   double _modelProgress = 0;
   String _status = '';
+  bool _publishing = false;
   StreamSubscription<double>? _levelSub;
 
   @override
@@ -115,22 +116,44 @@ class _RecordScreenState extends State<RecordScreen> {
   Future<void> _publish() async {
     final services = context.read<AppServices>();
     final user = services.auth.currentUser;
-    if (user == null || _recording == null) return;
-    final podcast = Podcast(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      title: _title.text.trim().isEmpty ? 'Ohne Titel' : _title.text.trim(),
-      description: _desc.text.trim(),
-      creatorId: user.id,
-      creatorName: user.displayName,
-      category: _category,
-      audioUri: _recording!.wavPath,
-      durationMs: _recording!.duration.inMilliseconds,
-      createdAt: DateTime.now(),
-    );
-    await services.podcasts.publish(podcast);
-    if (!mounted) return;
-    _snack('Veröffentlicht: ${podcast.title}');
-    _reset();
+    if (user == null || _recording == null) {
+      _snack('Bitte zuerst anmelden.');
+      return;
+    }
+    if (_publishing) return;
+    setState(() => _publishing = true);
+    try {
+      // Persist the audio (local copy in offline mode, Supabase Storage upload
+      // in cloud mode) and use whatever URI it returns as the playable source.
+      final bytes = await File(_recording!.wavPath).readAsBytes();
+      final fileName = 'rec_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final audioUri = await services.audioStorage.uploadPodcastAudio(
+        ownerId: user.id,
+        fileName: fileName,
+        bytes: bytes,
+        contentType: 'audio/wav',
+      );
+
+      final podcast = Podcast(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        title: _title.text.trim().isEmpty ? 'Ohne Titel' : _title.text.trim(),
+        description: _desc.text.trim(),
+        creatorId: user.id,
+        creatorName: user.displayName,
+        category: _category,
+        audioUri: audioUri,
+        durationMs: _recording!.duration.inMilliseconds,
+        createdAt: DateTime.now(),
+      );
+      await services.podcasts.publish(podcast);
+      if (!mounted) return;
+      _snack('Veröffentlicht: ${podcast.title}');
+      _reset();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _publishing = false);
+      _snack('Upload fehlgeschlagen: $e');
+    }
   }
 
   void _reset() {
@@ -142,6 +165,7 @@ class _RecordScreenState extends State<RecordScreen> {
       _gateResult = null;
       _elapsed = Duration.zero;
       _level = 0;
+      _publishing = false;
     });
   }
 
@@ -297,8 +321,18 @@ class _RecordScreenState extends State<RecordScreen> {
         ),
         const SizedBox(height: 24),
         FilledButton(
-            onPressed: _publish, child: const Text('Veröffentlichen')),
-        TextButton(onPressed: _reset, child: const Text('Verwerfen')),
+          onPressed: _publishing ? null : _publish,
+          child: _publishing
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Text('Veröffentlichen'),
+        ),
+        TextButton(
+            onPressed: _publishing ? null : _reset,
+            child: const Text('Verwerfen')),
       ],
     );
   }

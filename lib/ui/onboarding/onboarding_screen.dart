@@ -29,23 +29,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final auth = context.read<AppServices>().auth;
+  /// Runs an auth action with a busy state and a user-facing error snackbar, so
+  /// no auth failure (bad password, unconfirmed email, disabled provider, …)
+  /// goes silently unhandled.
+  Future<void> _runAuth(Future<void> Function() action) async {
     setState(() => _busy = true);
     try {
-      if (_isSignUp) {
-        await auth.signUp(
-          email: _email.text.trim(),
-          password: _password.text,
-          displayName:
-              _name.text.trim().isEmpty ? 'Hörer' : _name.text.trim(),
-        );
-      } else {
-        await auth.signIn(email: _email.text.trim(), password: _password.text);
+      await action();
+      // On success, AuthGate swaps this screen out via the auth stream.
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_authError(e))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Friendly German message. Reads `.message` off Supabase's AuthException
+  /// without importing the SDK here (keeps the repository seam intact).
+  String _authError(Object e) {
+    String detail;
+    try {
+      detail = ((e as dynamic).message as String?) ?? e.toString();
+    } catch (_) {
+      detail = e.toString();
+    }
+    return 'Anmeldung fehlgeschlagen: $detail';
+  }
+
+  Future<void> _submit() {
+    final auth = context.read<AppServices>().auth;
+    return _runAuth(() async {
+      if (_isSignUp) {
+        await auth.signUp(
+          email: _email.text.trim(),
+          password: _password.text,
+          displayName: _name.text.trim().isEmpty ? 'Hörer' : _name.text.trim(),
+        );
+      } else {
+        await auth.signIn(email: _email.text.trim(), password: _password.text);
+      }
+    });
   }
 
   @override
@@ -112,7 +138,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 OutlinedButton(
                   onPressed: _busy
                       ? null
-                      : () => context.read<AppServices>().auth.continueAsGuest(),
+                      : () => _runAuth(
+                          () => context.read<AppServices>().auth.continueAsGuest()),
                   child: const Text('Als Gast fortfahren'),
                 ),
               ],

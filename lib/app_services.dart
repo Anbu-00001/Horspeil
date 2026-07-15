@@ -33,7 +33,7 @@ class AppServices {
         auth: LocalAuthRepository(),
         podcasts: LocalPodcastRepository(),
         audioStorage: LocalAudioStorage(),
-        player: PlayerService(),
+        player: JustAudioPlayerService(),
       );
 
   /// Supabase-backed wiring: Auth + audio Storage in the cloud. Podcast
@@ -46,7 +46,7 @@ class AppServices {
       auth: SupabaseAuthRepository(client.auth),
       podcasts: LocalPodcastRepository(),
       audioStorage: SupabaseAudioStorage(client.storage),
-      player: PlayerService(),
+      player: JustAudioPlayerService(),
     );
   }
 
