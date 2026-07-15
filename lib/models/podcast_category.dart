@@ -1,3 +1,5 @@
+import '../config/app_language.dart';
+
 /// Podcast categories for Hörspiel.
 ///
 /// NOTE (taxonomy decision, 2026-07-13): the written spec asked for *topic*
@@ -27,6 +29,10 @@ enum PodcastCategory {
 
   /// English label (useful for CEFR learners / accessibility).
   final String englishLabel;
+
+  /// Label for the active UI language.
+  String label(AppLanguage lang) =>
+      lang == AppLanguage.en ? englishLabel : germanLabel;
 
   static PodcastCategory? fromId(String? id) {
     if (id == null) return null;

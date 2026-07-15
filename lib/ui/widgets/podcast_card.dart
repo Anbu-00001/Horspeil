@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 import '../../models/podcast.dart';
 
 /// Feed/list card, styled after the "Neuerscheinungen" cards in the mockups:
@@ -14,6 +15,9 @@ class PodcastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final minutes = podcast.duration.inMinutes;
+    final s = context.l10n;
+    final lang = context.localeLanguage;
+    final categoryLabel = podcast.category.label(lang);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Padding(
@@ -32,17 +36,17 @@ class PodcastCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontFamily: 'serif', fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text('${podcast.creatorName} • ${podcast.category.germanLabel}',
+                  Text('${podcast.creatorName} • $categoryLabel',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: AppPalette.mutedText, fontSize: 13)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _tag(podcast.category.germanLabel.toUpperCase()),
+                      _tag(categoryLabel.toUpperCase()),
                       const SizedBox(width: 8),
                       if (minutes > 0)
-                        Text('$minutes Min.',
+                        Text(s.minutesShort(minutes),
                             style: TextStyle(
                                 color: AppPalette.mutedText, fontSize: 12)),
                     ],

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 import '../../models/podcast.dart';
 import '../../models/podcast_category.dart';
 import '../player/player_screen.dart';
@@ -24,7 +25,7 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     final services = context.read<AppServices>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Hörspiel')),
+      appBar: AppBar(title: Text(context.l10n.appName)),
       body: Column(
         children: [
           _categoryChips(),
@@ -54,7 +55,9 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Widget _categoryChips() {
-    final categories = context.read<AppServices>().config.categories;
+    final services = context.read<AppServices>();
+    final categories = services.config.categories;
+    final lang = context.watch<LocaleController>().language;
     return SizedBox(
       height: 52,
       child: ListView(
@@ -64,7 +67,7 @@ class _FeedScreenState extends State<FeedScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: ChoiceChip(
-              label: const Text('Alle'),
+              label: Text(context.l10n.categoryAll),
               selected: _category == null,
               onSelected: (_) => setState(() => _category = null),
             ),
@@ -73,7 +76,7 @@ class _FeedScreenState extends State<FeedScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: ChoiceChip(
-                label: Text(c.germanLabel),
+                label: Text(c.label(lang)),
                 selected: _category == c,
                 selectedColor: AppPalette.primary,
                 labelStyle: TextStyle(
@@ -96,11 +99,11 @@ class _FeedScreenState extends State<FeedScreen> {
             Icon(Icons.sentiment_dissatisfied,
                 size: 64, color: AppPalette.mutedText),
             const SizedBox(height: 16),
-            Text('Noch keine Hörspiele hier',
+            Text(context.l10n.feedEmptyTitle,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Nimm dein erstes deutsches Hörspiel auf — tippe auf „Aufnehmen“.',
+              context.l10n.feedEmptyBody,
               textAlign: TextAlign.center,
               style: TextStyle(color: AppPalette.mutedText),
             ),
@@ -113,7 +116,7 @@ class _FeedScreenState extends State<FeedScreen> {
   void _play(Podcast podcast) {
     if (podcast.audioUri.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Für dieses Hörspiel gibt es keine Audiodatei.')),
+        SnackBar(content: Text(context.strings.noAudioFile)),
       );
       return;
     }

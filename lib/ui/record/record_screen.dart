@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 import '../../models/podcast.dart';
 import '../../models/podcast_category.dart';
 import '../../services/audio/pcm_codec.dart';
@@ -80,9 +81,10 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _runGate() async {
+    final s = context.strings;
     setState(() {
       _stage = _Stage.checking;
-      _status = 'Modell wird vorbereitet…';
+      _status = s.modelPreparing;
       _modelProgress = 0;
     });
     try {
@@ -91,7 +93,7 @@ class _RecordScreenState extends State<RecordScreen> {
           .ensure(onProgress: (p) => setState(() => _modelProgress = p));
       _gate = SherpaLanguageGate(model: model, config: config.languageGate);
 
-      setState(() => _status = 'Sprache wird geprüft…');
+      setState(() => _status = s.checkingTitle);
       final bytes = await File(_recording!.pcmPath).readAsBytes();
       final samples = PcmCodec.pcm16ToFloat32(bytes);
       final result =
@@ -107,7 +109,7 @@ class _RecordScreenState extends State<RecordScreen> {
       });
     } catch (e) {
       setState(() {
-        _status = 'Prüfung fehlgeschlagen: $e';
+        _status = s.checkFailed(e);
         _stage = _Stage.uncertain;
       });
     }
@@ -115,9 +117,10 @@ class _RecordScreenState extends State<RecordScreen> {
 
   Future<void> _publish() async {
     final services = context.read<AppServices>();
+    final s = context.strings;
     final user = services.auth.currentUser;
     if (user == null || _recording == null) {
-      _snack('Bitte zuerst anmelden.');
+      _snack(s.signInFirst);
       return;
     }
     if (_publishing) return;
@@ -136,7 +139,7 @@ class _RecordScreenState extends State<RecordScreen> {
 
       final podcast = Podcast(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
-        title: _title.text.trim().isEmpty ? 'Ohne Titel' : _title.text.trim(),
+        title: _title.text.trim().isEmpty ? s.untitled : _title.text.trim(),
         description: _desc.text.trim(),
         creatorId: user.id,
         creatorName: user.displayName,
@@ -147,12 +150,12 @@ class _RecordScreenState extends State<RecordScreen> {
       );
       await services.podcasts.publish(podcast);
       if (!mounted) return;
-      _snack('Veröffentlicht: ${podcast.title}');
+      _snack(s.published(podcast.title));
       _reset();
     } catch (e) {
       if (!mounted) return;
       setState(() => _publishing = false);
-      _snack('Upload fehlgeschlagen: $e');
+      _snack(s.uploadFailed(e));
     }
   }
 
@@ -176,7 +179,7 @@ class _RecordScreenState extends State<RecordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Aufnehmen'),
+        title: Text(context.l10n.navRecord),
         automaticallyImplyLeading: false,
       ),
       body: Padding(
@@ -195,30 +198,32 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Widget _idleView() {
+    final s = context.l10n;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('„Deine Geschichte beginnt hier…“',
+          Text(s.recIdleQuote,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
-          Text('Nur deutschsprachige Hörspiele werden veröffentlicht.',
+          Text(s.recIdleSub,
               textAlign: TextAlign.center,
               style: TextStyle(color: AppPalette.mutedText)),
           const SizedBox(height: 40),
-          _bigMicButton(onTap: _start, label: 'AUFNAHME'),
+          _bigMicButton(onTap: _start, label: s.recBtn),
         ],
       ),
     );
   }
 
   Widget _recordingView() {
+    final s = context.l10n;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('AUFNAHMEZEIT',
+          Text(s.recTimeLabel,
               style: TextStyle(letterSpacing: 2, color: AppPalette.mutedText)),
           const SizedBox(height: 8),
           Text(_fmt(_elapsed),
@@ -232,13 +237,14 @@ class _RecordScreenState extends State<RecordScreen> {
           ),
           const SizedBox(height: 40),
           _bigMicButton(
-              onTap: _stop, label: 'STOPP', icon: Icons.stop, pulse: true),
+              onTap: _stop, label: s.recStop, icon: Icons.stop, pulse: true),
         ],
       ),
     );
   }
 
   Widget _reviewView() {
+    final s = context.l10n;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -246,15 +252,14 @@ class _RecordScreenState extends State<RecordScreen> {
           const Icon(Icons.check_circle_outline,
               size: 64, color: AppPalette.secondary),
           const SizedBox(height: 16),
-          Text('Aufnahme fertig (${_fmt(_recording?.duration ?? Duration.zero)})',
+          Text(s.recDone(_fmt(_recording?.duration ?? Duration.zero)),
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          Text('PCM • ${_recording?.sampleRate}Hz • Mono',
+          Text(s.recPcmInfo(_recording?.sampleRate ?? 0),
               style: TextStyle(color: AppPalette.mutedText)),
           const SizedBox(height: 32),
-          FilledButton(
-              onPressed: _runGate, child: const Text('Weiter →')),
-          TextButton(onPressed: _reset, child: const Text('Verwerfen')),
+          FilledButton(onPressed: _runGate, child: Text(s.next)),
+          TextButton(onPressed: _reset, child: Text(s.discard)),
         ],
       ),
     );

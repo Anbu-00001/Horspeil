@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app_services.dart';
 import 'config/env.dart';
+import 'config/locale_controller.dart';
 import 'repositories/auth_repository.dart';
 import 'ui/home/home_shell.dart';
 import 'ui/onboarding/onboarding_screen.dart';
@@ -21,18 +22,23 @@ Future<void> main() async {
     );
   }
 
-  runApp(HorspielApp(services: AppServices.auto()));
+  final locale = await LocaleController.load();
+  runApp(HorspielApp(services: AppServices.auto(), locale: locale));
 }
 
 class HorspielApp extends StatelessWidget {
-  const HorspielApp({super.key, required this.services});
+  const HorspielApp({super.key, required this.services, required this.locale});
 
   final AppServices services;
+  final LocaleController locale;
 
   @override
   Widget build(BuildContext context) {
-    return Provider<AppServices>.value(
-      value: services,
+    return MultiProvider(
+      providers: [
+        Provider<AppServices>.value(value: services),
+        ChangeNotifierProvider<LocaleController>.value(value: locale),
+      ],
       child: MaterialApp(
         title: 'Hörspiel',
         debugShowCheckedModeBanner: false,

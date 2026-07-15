@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/locale_controller.dart';
 import '../profile/profile_screen.dart';
 import '../record/record_screen.dart';
 import 'feed_screen.dart';
@@ -25,28 +26,29 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.l10n;
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Startseite'),
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: s.navHome),
           NavigationDestination(
-              icon: Icon(Icons.explore_outlined),
-              selectedIcon: Icon(Icons.explore),
-              label: 'Entdecken'),
+              icon: const Icon(Icons.explore_outlined),
+              selectedIcon: const Icon(Icons.explore),
+              label: s.navDiscover),
           NavigationDestination(
-              icon: Icon(Icons.mic_none),
-              selectedIcon: Icon(Icons.mic),
-              label: 'Aufnehmen'),
+              icon: const Icon(Icons.mic_none),
+              selectedIcon: const Icon(Icons.mic),
+              label: s.navRecord),
           NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profil'),
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: s.navProfile),
         ],
       ),
     );

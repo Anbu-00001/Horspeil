@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 import '../../models/podcast.dart';
 import '../../services/audio/player_service.dart';
 
@@ -42,8 +43,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         leading: IconButton(
             icon: const Icon(Icons.keyboard_arrow_down),
             onPressed: () => Navigator.of(context).pop()),
-        title: const Text('WIEDERGABE',
-            style: TextStyle(
+        title: Text(context.l10n.playerTitle,
+            style: const TextStyle(
                 fontSize: 13, letterSpacing: 2, color: AppPalette.mutedText)),
         centerTitle: true,
       ),
@@ -68,7 +69,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 4),
-            Text('von ${p.creatorName}',
+            Text(context.l10n.byCreator(p.creatorName),
                 style: TextStyle(
                     color: AppPalette.mutedText,
                     fontStyle: FontStyle.italic)),

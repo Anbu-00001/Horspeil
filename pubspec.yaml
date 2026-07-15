@@ -46,6 +46,7 @@ dependencies:
   http: ^1.6.0                # download model on first run
   crypto: ^3.0.7              # verify model checksum
   provider: ^6.1.5+1          # simple state management
+  shared_preferences: ^2.3.2  # persist the UI-language toggle (de/en)
 
   # --- Backend: Supabase (Auth + Storage now, Postgres metadata later) ---
   # Chosen over Firebase (Cloud Storage there is Blaze-only since 2026-02-03).

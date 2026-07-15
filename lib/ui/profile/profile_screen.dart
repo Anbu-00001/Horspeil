@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
+import '../../config/app_language.dart';
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 import '../../models/podcast.dart';
 import '../widgets/podcast_card.dart';
 
-/// Minimal profile: the signed-in user's identity + their uploaded podcasts.
+/// Minimal profile: the signed-in user's identity + their uploaded podcasts,
+/// plus the UI-language toggle.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -14,10 +17,11 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final services = context.read<AppServices>();
     final user = services.auth.currentUser;
+    final s = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: Text(s.profileTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: AppPalette.mutedText),
@@ -45,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
-            child: Text(user?.displayName ?? 'Gast',
+            child: Text(user?.displayName ?? s.guestName,
                 style: Theme.of(context).textTheme.headlineMedium),
           ),
           if (user?.email != null)
@@ -53,9 +57,10 @@ class ProfileScreen extends StatelessWidget {
                 child: Text(user!.email!,
                     style: TextStyle(color: AppPalette.mutedText))),
           const SizedBox(height: 20),
+          const _LanguageRow(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text('Meine Hörspiele',
+            child: Text(s.myPodcasts,
                 style: Theme.of(context).textTheme.titleLarge),
           ),
           StreamBuilder<List<Podcast>>(
@@ -67,7 +72,7 @@ class ProfileScreen extends StatelessWidget {
               if (mine.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Text('Noch keine Aufnahmen.',
+                  child: Text(s.noRecordings,
                       style: TextStyle(color: AppPalette.mutedText)),
                 );
               }
@@ -80,6 +85,30 @@ class ProfileScreen extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// UI-language selector shown on the profile screen.
+class _LanguageRow extends StatelessWidget {
+  const _LanguageRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<LocaleController>();
+    return ListTile(
+      leading: const Icon(Icons.language, color: AppPalette.primary),
+      title: Text(context.l10n.languageLabel),
+      trailing: SegmentedButton<AppLanguage>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(visualDensity: VisualDensity.compact),
+        segments: const [
+          ButtonSegment(value: AppLanguage.de, label: Text('DE')),
+          ButtonSegment(value: AppLanguage.en, label: Text('EN')),
+        ],
+        selected: {controller.language},
+        onSelectionChanged: (sel) => controller.setLanguage(sel.first),
       ),
     );
   }

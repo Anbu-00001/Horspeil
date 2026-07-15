@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_services.dart';
+import '../../config/app_language.dart';
 import '../../config/app_palette.dart';
+import '../../config/locale_controller.dart';
 
 /// Welcome + email auth. Mirrors the Stitch onboarding: the "Podcasts. Nur auf
-/// Deutsch." hook, a primary CTA, and a fast guest path so the slice is
-/// reachable without a real backend.
+/// Deutsch." hook, a primary CTA, and a fast guest path. Also hosts the DE/EN
+/// language toggle — this is the first screen, so a user who can't read German
+/// can switch the interface before going any further.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -33,6 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// no auth failure (bad password, unconfirmed email, disabled provider, …)
   /// goes silently unhandled.
   Future<void> _runAuth(Future<void> Function() action) async {
+    final s = context.strings;
     setState(() => _busy = true);
     try {
       await action();
@@ -40,33 +44,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(_authError(e))));
+            .showSnackBar(SnackBar(content: Text(s.authFailed(_reason(e)))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  /// Friendly German message. Reads `.message` off Supabase's AuthException
-  /// without importing the SDK here (keeps the repository seam intact).
-  String _authError(Object e) {
-    String detail;
+  /// Reads `.message` off Supabase's AuthException without importing the SDK
+  /// here (keeps the repository seam intact).
+  String _reason(Object e) {
     try {
-      detail = ((e as dynamic).message as String?) ?? e.toString();
+      return ((e as dynamic).message as String?) ?? e.toString();
     } catch (_) {
-      detail = e.toString();
+      return e.toString();
     }
-    return 'Anmeldung fehlgeschlagen: $detail';
   }
 
   Future<void> _submit() {
     final auth = context.read<AppServices>().auth;
+    final s = context.strings;
     return _runAuth(() async {
       if (_isSignUp) {
         await auth.signUp(
           email: _email.text.trim(),
           password: _password.text,
-          displayName: _name.text.trim().isEmpty ? 'Hörer' : _name.text.trim(),
+          displayName:
+              _name.text.trim().isEmpty ? s.defaultListenerName : _name.text.trim(),
         );
       } else {
         await auth.signIn(email: _email.text.trim(), password: _password.text);
@@ -76,16 +80,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 12),
-                Text('Hörspiel',
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _LanguageToggle(),
+                ),
+                const SizedBox(height: 4),
+                Text(s.appName,
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme
@@ -94,9 +103,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 24),
                 Text.rich(
                   TextSpan(children: [
-                    const TextSpan(text: 'Podcasts.\n'),
+                    TextSpan(text: '${s.onbTagline1}\n'),
                     TextSpan(
-                      text: 'Nur auf Deutsch.',
+                      text: s.onbTagline2,
                       style: TextStyle(color: AppPalette.primary),
                     ),
                   ]),
@@ -105,15 +114,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Entdecke exklusive Hörspiele und Podcasts in deiner Sprache.',
+                  s.onbSubtitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppPalette.mutedText),
                 ),
                 const SizedBox(height: 28),
-                if (_isSignUp)
-                  _field(_name, 'Name', TextInputType.name),
-                _field(_email, 'E-Mail', TextInputType.emailAddress),
-                _field(_password, 'Passwort', TextInputType.visiblePassword,
+                if (_isSignUp) _field(_name, s.fieldName, TextInputType.name),
+                _field(_email, s.fieldEmail, TextInputType.emailAddress),
+                _field(_password, s.fieldPassword, TextInputType.visiblePassword,
                     obscure: true),
                 const SizedBox(height: 8),
                 FilledButton(
@@ -124,15 +132,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : Text(_isSignUp ? 'Kostenlos starten' : 'Anmelden'),
+                      : Text(_isSignUp ? s.signUpCta : s.signInCta),
                 ),
                 TextButton(
                   onPressed: _busy
                       ? null
                       : () => setState(() => _isSignUp = !_isSignUp),
-                  child: Text(_isSignUp
-                      ? 'Bereits ein Konto? Anmelden'
-                      : 'Noch kein Konto? Jetzt registrieren'),
+                  child: Text(_isSignUp ? s.toSignIn : s.toSignUp),
                 ),
                 const Divider(height: 32),
                 OutlinedButton(
@@ -140,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ? null
                       : () => _runAuth(
                           () => context.read<AppServices>().auth.continueAsGuest()),
-                  child: const Text('Als Gast fortfahren'),
+                  child: Text(s.guestCta),
                 ),
               ],
             ),
@@ -166,6 +172,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
+    );
+  }
+}
+
+/// Compact DE | EN segmented switch for the UI language.
+class _LanguageToggle extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<LocaleController>();
+    return SegmentedButton<AppLanguage>(
+      showSelectedIcon: false,
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        textStyle: WidgetStatePropertyAll(
+            TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      ),
+      segments: const [
+        ButtonSegment(value: AppLanguage.de, label: Text('DE')),
+        ButtonSegment(value: AppLanguage.en, label: Text('EN')),
+      ],
+      selected: {controller.language},
+      onSelectionChanged: (sel) => controller.setLanguage(sel.first),
     );
   }
 }
